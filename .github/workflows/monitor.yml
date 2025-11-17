@@ -1,12 +1,13 @@
-name: Website Monitor
+name: Websiter Monitor
 
 on:
   schedule:
+    # 每周一上午9点（北京时间）
     - cron: '0 1 * * 1'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   issues: write
 
 jobs:
@@ -22,52 +23,37 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install requests beautifulsoup4
+        pip install requests beautifulsoup4 lxml
     
     - name: Run monitor
       id: monitor
       run: |
-        cat > check.py << 'EOF'
-        import requests
-        import json
-        from datetime import datetime
-        
-        # 读取配置
-        with open('sites_config.json', 'r') as f:
-            config = json.load(f)
-        
-        print("开始检查网站...")
-        results = []
-        
-        for site in config['sites']:
-            if not site.get('enabled', True):
-                continue
-            try:
-                r = requests.get(site['url'], timeout=15, headers={
-                    'User-Agent': 'Mozilla/5.0 Website Monitor'
-                })
-                results.append(f"✅ {site['name']}: HTTP {r.status_code}")
-                print(f"✅ {site['name']}: 成功访问")
-            except Exception as e:
-                results.append(f"❌ {site['name']}: {str(e)[:50]}")
-                print(f"❌ {site['name']}: 访问失败")
-        
-        # 生成报告
-        with open('report.txt', 'w') as f:
-            f.write(f"# 网站监控报告\n")
-            f.write(f"时间: {datetime.now()}\n\n")
-            for r in results:
-                f.write(f"{r}\n")
-        
-        print("报告已生成")
-        EOF
-        
-        python check.py
+        python monitor.py
     
-    - name: Create Issue  
+    - name: Commit state file
       if: success()
-      uses: peter-evans/create-issue-from-file@v4
-      with:
-        title: "[监控报告] ${{ github.run_number }} - ${{ github.event_name }}"
-        content-filepath: ./report.txt
-        labels: monitor
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add last_state.json
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update monitoring state [skip ci]"
+        git push
+    
+    - name: Create Issue for updates
+      if: success()
+      run: |
+        # 检查是否有更新
+        if grep -q "发现更新" report.md 2>/dev/null || grep -q "网站事件更新通知" report.md 2>/dev/null; then
+          echo "Found updates, creating issue..."
+          
+          # 使用GitHub CLI创建Issue
+          gh issue create \
+            --title "🔔 [$(date +%Y-%m-%d)] 检测到网站更新" \
+            --body-file report.md \
+            --label "events-update,automated" \
+            || echo "Issue creation failed"
+        else
+          echo "No updates found, skipping issue creation"
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}
