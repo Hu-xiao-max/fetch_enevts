@@ -9,16 +9,6 @@
       "name": "Stanford AI Lab Events",
       "url": "https://ai.stanford.edu/events/",
       "enabled": true
-    },
-    {
-      "name": "Berkeley BAIR Events",
-      "url": "https://bair.berkeley.edu/events/",
-      "enabled": true
-    },
-    {
-      "name": "CMU Robotics Events",
-      "url": "https://www.ri.cmu.edu/events/",
-      "enabled": false
     }
   ]
 }
