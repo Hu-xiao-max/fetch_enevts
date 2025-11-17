@@ -1,0 +1,40 @@
+{
+    "sites": [
+      {
+        "name": "MIT CSAIL Events",
+        "url": "https://cap.csail.mit.edu/members/events",
+        "enabled": true,
+        "selectors": {
+          "container": ["div.event", "article.event-item", "li.event"],
+          "title": ["h2", "h3", "h4", "a.event-title"],
+          "date": ["time", "span.date", "div.event-date"],
+          "description": ["p.description", "div.summary"],
+          "link": ["a"]
+        }
+      },
+      {
+        "name": "Stanford AI Lab Events",
+        "url": "https://ai.stanford.edu/events/",
+        "enabled": true,
+        "selectors": {
+          "container": ["div.event-item", "article", "div.post"],
+          "title": ["h2", "h3", "a"],
+          "date": ["span.date", "time"],
+          "description": ["p", "div.excerpt"],
+          "link": ["a"]
+        }
+      },
+      {
+        "name": "CMU Robotics Events",
+        "url": "https://www.ri.cmu.edu/events/",
+        "enabled": true,
+        "selectors": {
+          "container": ["div.event", "article"],
+          "title": ["h3", "h2", "a"],
+          "date": ["time", "span.date"],
+          "description": ["p"],
+          "link": ["a"]
+        }
+      }
+    ]
+  }

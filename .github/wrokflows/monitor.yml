@@ -1,0 +1,58 @@
+name: Multi-Site Events Monitor
+
+on:
+  schedule:
+    # 每周一早上9点检查（UTC时间周一1点，北京时间周一9点）
+    - cron: '0 1 * * 1'
+  
+  # 允许手动触发
+  workflow_dispatch:
+
+jobs:
+  check-events:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Check for updates
+      id: check
+      run: python monitor.py
+    
+    - name: Send email notification
+      if: steps.check.outputs.has_updates == 'true'
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 465
+        secure: true
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: 📅 Weekly Events Update - ${{ steps.check.outputs.update_count }} new events
+        body: file://email_content.txt
+        to: ${{ secrets.NOTIFICATION_EMAIL }}
+        from: Events Monitor Bot
+        convert_markdown: true
+    
+    - name: Push changes
+      if: steps.check.outputs.has_updates == 'true' 
+      run: |
+        git push
+    
+    - name: Keep workflow alive
+      uses: gautamkrishnar/keepalive-workflow@v1
+      with:
+        time_elapsed: 30
