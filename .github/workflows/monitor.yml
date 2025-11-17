@@ -9,17 +9,11 @@ jobs:
   check-events:
     runs-on: ubuntu-latest
     
-    # 添加这些权限设置
-    permissions:
-      contents: write    # 允许读写仓库内容
-      issues: write      # 允许创建Issues
-      actions: read      # 允许读取Actions
-    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        persist-credentials: false
+        token: ${{ secrets.PAT_TOKEN }}  # 使用PAT而不是GITHUB_TOKEN
         fetch-depth: 0
     
     - name: Set up Python
@@ -40,6 +34,7 @@ jobs:
       if: steps.check.outputs.has_updates == 'true'
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.PAT_TOKEN }}  # 使用PAT
         script: |
           const fs = require('fs');
           const content = fs.readFileSync('email_content.txt', 'utf8');
@@ -56,12 +51,18 @@ jobs:
           
           console.log(`Created issue #${issue.data.number}`);
     
+    - name: Configure Git
+      if: steps.check.outputs.has_updates == 'true'
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+    
     - name: Push changes
       if: steps.check.outputs.has_updates == 'true' 
-      uses: ad-m/github-push-action@master
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        branch: ${{ github.ref }}
+      run: |
+        git add -A
+        git diff-index --quiet HEAD || git commit -m "Update events cache"
+        git push
     
     - name: Keep workflow alive
       uses: gautamkrishnar/keepalive-workflow@v1
