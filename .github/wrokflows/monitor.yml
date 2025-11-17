@@ -67,3 +67,27 @@ jobs:
       uses: gautamkrishnar/keepalive-workflow@v1
       with:
         time_elapsed: 30
+
+    - name: Close old issues
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            labels: 'events-update',
+            state: 'open'
+          });
+          
+          // 关闭超过30天的issue
+          const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+          for (const issue of issues.data) {
+            if (new Date(issue.created_at) < thirtyDaysAgo) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                state: 'closed'
+              });
+            }
+          }
