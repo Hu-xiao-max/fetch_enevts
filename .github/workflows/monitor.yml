@@ -2,26 +2,25 @@ name: Multi-Site Events Monitor
 
 on:
   schedule:
-    # 每周一早上9点检查（UTC时间周一1点，北京时间周一9点）
     - cron: '0 1 * * 1'
-  
-  # 允许手动触发
   workflow_dispatch:
 
 jobs:
   check-events:
     runs-on: ubuntu-latest
     
-    # 需要写入权限来创建Issues
+    # 添加这些权限设置
     permissions:
-      issues: write
-      contents: write
+      contents: write    # 允许读写仓库内容
+      issues: write      # 允许创建Issues
+      actions: read      # 允许读取Actions
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
+        persist-credentials: false
+        fetch-depth: 0
     
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -47,7 +46,6 @@ jobs:
           const updateCount = '${{ steps.check.outputs.update_count }}';
           const date = new Date().toISOString().split('T')[0];
           
-          // 创建Issue
           const issue = await github.rest.issues.create({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -60,8 +58,10 @@ jobs:
     
     - name: Push changes
       if: steps.check.outputs.has_updates == 'true' 
-      run: |
-        git push
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ${{ github.ref }}
     
     - name: Keep workflow alive
       uses: gautamkrishnar/keepalive-workflow@v1
