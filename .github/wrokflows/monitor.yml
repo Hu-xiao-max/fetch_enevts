@@ -12,6 +12,11 @@ jobs:
   check-events:
     runs-on: ubuntu-latest
     
+    # 需要写入权限来创建Issues
+    permissions:
+      issues: write
+      contents: write
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -32,20 +37,26 @@ jobs:
       id: check
       run: python monitor.py
     
-    - name: Send email notification
+    - name: Create GitHub Issue notification
       if: steps.check.outputs.has_updates == 'true'
-      uses: dawidd6/action-send-mail@v3
+      uses: actions/github-script@v6
       with:
-        server_address: smtp.gmail.com
-        server_port: 465
-        secure: true
-        username: ${{ secrets.EMAIL_USERNAME }}
-        password: ${{ secrets.EMAIL_PASSWORD }}
-        subject: 📅 Weekly Events Update - ${{ steps.check.outputs.update_count }} new events
-        body: file://email_content.txt
-        to: ${{ secrets.NOTIFICATION_EMAIL }}
-        from: Events Monitor Bot
-        convert_markdown: true
+        script: |
+          const fs = require('fs');
+          const content = fs.readFileSync('email_content.txt', 'utf8');
+          const updateCount = '${{ steps.check.outputs.update_count }}';
+          const date = new Date().toISOString().split('T')[0];
+          
+          // 创建Issue
+          const issue = await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `📅 [${date}] 网站事件更新 - 发现 ${updateCount} 个新事件`,
+            body: content,
+            labels: ['events-update', 'automated']
+          });
+          
+          console.log(`Created issue #${issue.data.number}`);
     
     - name: Push changes
       if: steps.check.outputs.has_updates == 'true' 
